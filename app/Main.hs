@@ -1,22 +1,38 @@
 module Main where
 
-import Web.Slack
-import Web.Slack.Message
-import System.Environment (lookupEnv)
-import Data.Maybe (fromMaybe)
-import Control.Applicative
-import Data.Text (pack)
+import Data.Time.Clock
+import Data.Time.LocalTime
+import Data.Time.Format
+import Text.Printf
 
-import Lib
+convertTime :: UTCTime -> TimeZone -> String
+convertTime time tz =
+  let timeJST = utcToZonedTime tz time in
+  formatTime defaultTimeLocale "%Y/%m/%d %H:%M" timeJST
 
-config :: String -> SlackConfig
-config apiToken = SlackConfig { _slackApiToken = apiToken }
+getCurrentTimeString :: IO String
+getCurrentTimeString = convertTime <$> getCurrentTime <*> getCurrentTimeZone
 
-echoBot :: SlackBot ()
-echoBot (Message cid _ msg _ _ _) = sendMessage cid (pack "OK")
-echoBot _ = return ()
+prompt :: IO ()
+prompt = putStr "Enter command > "
+
+processStart :: String -> IO ()
+processStart timeStr = putStrLn $ printf "Started at %s" timeStr
+
+processFinish :: String -> IO ()
+processFinish timeStr = putStrLn $ printf "Finished at %s" timeStr
+
+sendCommand :: String -> String -> IO ()
+sendCommand command timeStr =
+  case command of
+    "start"  -> processStart timeStr
+    "finish" -> processFinish timeStr
+    _ -> putStrLn $ printf "Do not know how to process command: %s" command
+
 
 main :: IO ()
 main = do
-  apiToken <- fromMaybe (error "SLACK_API_TOKEN not set") <$> lookupEnv "SLACK_API_TOKEN"
-  runBot (config apiToken) echoBot ()
+  prompt
+  command <- getLine
+  timeStr <- getCurrentTimeString
+  sendCommand command timeStr
