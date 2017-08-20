@@ -4,3 +4,7 @@ packages:
 - '.'
 
 extra-deps:
+- text-1.2.2.2
+- time-1.6
+- warp-3.2.13
+- linklater-4.0.0.2
