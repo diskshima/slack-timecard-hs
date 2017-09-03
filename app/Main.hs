@@ -2,51 +2,72 @@
 
 module Main where
 
+import qualified Data.Text as Text
+import Control.Lens
+import Control.Arrow ((&&&))
+import Control.Monad (void, forever, when)
 import Control.Monad.Except (runExceptT)
+import Data.Text.Strict.Lens
+import URI.ByteString
+import Data.Aeson (ToJSON, encode)
+import Wuss (runSecureClient)
+import qualified Network.WebSockets as Sock
+import Control.Concurrent (forkIO)
+import Control.Concurrent.Chan
+import Control.Concurrent.MVar
 
-import Data.Text
-import Data.Time.Clock (UTCTime, getCurrentTime)
-import Data.Time.LocalTime (TimeZone, getCurrentTimeZone, utcToZonedTime)
-import Data.Time.Format (formatTime, defaultTimeLocale)
-import Text.Printf (printf)
-
-import Network.Wai.Handler.Warp (run)
 import Network.Linklater
+import Network.Linklater.Types
 
-convertTime :: UTCTime -> TimeZone -> String
-convertTime time tz =
-  let timeJST = utcToZonedTime tz time in
-  formatTime defaultTimeLocale "%Y/%m/%d %H:%M" timeJST
+import Types
 
-getCurrentTimeString :: IO String
-getCurrentTimeString = convertTime <$> getCurrentTime <*> getCurrentTimeZone
+import qualified System.Environment as Env
 
-prompt :: IO ()
-prompt = putStr "Enter command > "
+voila :: URI -> Chan Speech -> IO (Chan Bytes)
+voila uri outbox =
+  case (uri ^? authorityL . _Just . authorityHostL . hostBSL . utf8 . unpacked,
+        uri ^? pathL . utf8 . unpacked) of
+    (Just host, Just path) -> do
+      chan <- newChan
+      runSecureClient host 443 path (consumer chan)
+      return chan
+    _ ->
+      error ("invalid url" ++ show uri)
+  where
+    consumer chan conn = do
+      void $ forkIO (forever worker)
+      void $ forkIO (forever listener)
+      where
+        worker = do
+          msg <- Sock.receiveData conn
+          writeChan chan msg
+        listener = do
+          speech <- readChan outbox
+          Sock.sendTextData conn (encode (Speech' speech 1))
 
-processStart :: String -> IO ()
-processStart timeStr = putStrLn $ printf "Started at %s" timeStr
-
-processFinish :: String -> IO ()
-processFinish timeStr = putStrLn $ printf "Finished at %s" timeStr
-
-sendCommand :: String -> String -> IO ()
-sendCommand command timeStr =
-  case command of
-    "start"  -> processStart timeStr
-    "finish" -> processFinish timeStr
-    _ -> putStrLn $ printf "Do not know how to process command: %s" command
-
-timestamp :: Command -> IO Text
-timestamp (Command command user_ channel (Just query)) = do
-  putStrLn $ printf "Command: %s" (show command)
-  let config = Config $ "SLACK_URL"
-  let message = SimpleMessage (EmojiIcon $ "gift") "Bot" channel "start"
-  runExceptT $ say message config
-  return "ok"
+jazzBot :: Chan Bytes -> Chan Speech -> IO ()
+jazzBot inbox outbox = do
+  countDB <- newMVar (0 :: Int)
+  withInbox inbox $ \line_ ->
+    when (Text.isInfixOf ":raised_hands:" (line_ ^. truth)) $ do
+      let update = (`mod` 3) . (+ 1) &&& Types.id
+      count <- modifyMVar countDB (return . update)
+      when (count == 2) $
+        writeChan outbox (Speech line_ "JAZZ HANDS")
 
 main :: IO ()
-main = do
-  putStrLn $ printf "Listening on port %d" port
-  run port (slashSimple timestamp)
-    where port = 8833
+main = void $ do
+  Just apiToken <- Env.lookupEnv "SLACK_API_TOKEN"
+  outbox <- newChan
+  uriResult <- runExceptT (startRTM $ APIToken $ Text.pack apiToken)
+  case uriResult of
+    Left e -> do
+      error ("Request error" ++ show e)
+    Right uri -> do
+      inbox <- voila uri outbox
+      jazzBot inbox outbox
+      sinkChan inbox
+
+sinkChan :: Chan Bytes -> IO ()
+sinkChan originalChan =
+  (void . forever) $ readChan originalChan
