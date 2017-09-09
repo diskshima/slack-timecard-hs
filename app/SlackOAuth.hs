@@ -1,35 +1,33 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
-import           Control.Monad        (mzero)
-import qualified Data.ByteString      as BS
-import qualified Data.ByteString.Lazy as BL
-import           Data.Text            (Text)
-import qualified Data.Text            as T
-import qualified Data.Text.Encoding   as T
-import qualified Data.Text.Lazy       as TL
-import qualified Data.Text.Lazy.Encoding as TLE
-import qualified Data.Map             as M
-import           Network.Wai
-import           Network.Wai.Handler.Warp (run)
-import           Network.HTTP.Types       (Query, status200)
-import           Network.HTTP.Conduit hiding (Request, queryString)
-import           URI.ByteString (serializeURIRef')
-import           URI.ByteString.QQ
-import           Data.String.Conversions (convertString)
-
-import           Network.OAuth.OAuth2
-
-import           SlackKey
-
-import           GHC.Generics
+import           Control.Monad            (mzero)
 import           Data.Aeson
 import           Data.Aeson.Types
+import qualified Data.ByteString          as BS
+import qualified Data.ByteString.Lazy     as BL
+import qualified Data.Map                 as M
+import           Data.String.Conversions  (convertString)
+import           Data.Text                (Text)
+import qualified Data.Text                as T
+import qualified Data.Text.Encoding       as T
+import qualified Data.Text.Lazy           as TL
+import qualified Data.Text.Lazy.Encoding  as TLE
+import           GHC.Generics
+import           Network.HTTP.Conduit     hiding (Request, queryString)
+import           Network.HTTP.Types       (Query, status200)
+import           Network.OAuth.OAuth2
+import           Network.Wai
+import           Network.Wai.Handler.Warp (run)
+import           URI.ByteString           (serializeURIRef')
+import           URI.ByteString.QQ
+
+import           SlackKey
 
 data Errors =
   SomeRandomError
@@ -56,7 +54,7 @@ getApiToken mgr code = do
   let (url, body) = accessTokenUrl slackKey code
   result <- doJSONPostRequest mgr slackKey url $ body ++ [("state", state)]
   case result of
-    Right token -> return token
+    Right token                    -> return token
     Left (e :: OAuth2Error Errors) -> Prelude.error $ show e
 
 getApiCode :: Request -> ExchangeToken
@@ -69,29 +67,29 @@ getApiCode request =
 
 application :: Application
 application request respond = do
-    response <- handleRequest requestPath request
-    respond $ responseLBS status200 [("Content-Type", "text/plain")] response
-  where
-    requestPath = T.intercalate "/" $ pathInfo request
+  response <- handleRequest requestPath request
+  respond $ responseLBS status200 [("Content-Type", "text/plain")] response
+    where
+      requestPath = T.intercalate "/" $ pathInfo request
 
 handleRequest :: Text -> Request -> IO BL.ByteString
 handleRequest "favicon.ico" _ = return ""
 handleRequest _ request = do
   mgr <- newManager tlsManagerSettings
   token <- getApiToken mgr $ getApiCode request
-  let accToken = accessToken token
-  putStrLn $ convertString (atoken accToken)
-  authRes <- runApiCall mgr accToken
+  authRes <- runApiCall mgr (accessToken token)
   return $ convertString $ show authRes
 
 runApiCall :: Manager -> AccessToken -> IO (OAuth2Result (OAuth2Error Errors) BL.ByteString)
 runApiCall mgr token =
+  -- Slack needs to access token to be passed in as a parameter.
+  -- Not part as the header.
   authPostBS mgr token [uri|https://slack.com/api/auth.test|]
              [("token", convertString (atoken token))]
 
 convertQueryToMap :: Query -> M.Map BS.ByteString BS.ByteString
 convertQueryToMap query =
-    M.fromList $ map normalize query
-  where
-    normalize (k, Just v)  = (k, v)
-    normalize (k, Nothing) = (k, BS.empty)
+  M.fromList $ map normalize query
+    where
+      normalize (k, Just v)  = (k, v)
+      normalize (k, Nothing) = (k, BS.empty)

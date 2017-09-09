@@ -3,16 +3,15 @@
 
 module SlackKey where
 
-import qualified Data.ByteString as BS
-import Data.Text (Text, pack)
-import Network.OAuth.OAuth2
-import System.Environment
-import URI.ByteString.QQ
+import qualified Data.ByteString      as BS
+import           Data.Text            (Text, pack)
+import           Network.OAuth.OAuth2
+import           System.Environment
+import           URI.ByteString.QQ
 
 readEnvVar :: String -> IO Text
 readEnvVar varName = do
   Just value <- lookupEnv varName
-  putStrLn value
   return $ pack value
 
 getSlackKey :: IO OAuth2
