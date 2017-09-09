@@ -24,7 +24,6 @@ import           URI.ByteString.QQ
 import           Data.String.Conversions (convertString)
 
 import           Network.OAuth.OAuth2
-import qualified Network.OAuth.OAuth2.AuthorizationRequest as AR
 
 import           SlackKey
 
@@ -82,31 +81,13 @@ handleRequest _ request = do
   token <- getApiToken mgr $ getApiCode request
   let accToken = accessToken token
   putStrLn $ convertString (atoken accToken)
-  authRes <- authResult mgr accToken
-  return $ convertString (show authRes)
+  authRes <- runApiCall mgr accToken
+  return $ convertString $ show authRes
 
-authResult :: Manager -> AccessToken -> IO (OAuth2Result (OAuth2Error Errors) AuthResult)
-authResult mgr token =
-  authPostJSON mgr token [uri|https://slack.com/api/auth.test|]
-    [("token", convertString (atoken token))]
-
-data AuthResult = AuthResult { ok :: Text
-                             , url :: Text
-                             , team :: Text
-                             , user :: Text
-                             , team_id :: Text
-                             , user_id :: Text
-                             } deriving (Show, Eq)
-
-instance FromJSON AuthResult where
-  parseJSON (Object o) = AuthResult
-                         <$> o .: "ok"
-                         <*> o .: "url"
-                         <*> o .: "team"
-                         <*> o .: "user"
-                         <*> o .: "team_id"
-                         <*> o .: "user_id"
-  parseJSON _ = mzero
+runApiCall :: Manager -> AccessToken -> IO (OAuth2Result (OAuth2Error Errors) BL.ByteString)
+runApiCall mgr token =
+  authPostBS mgr token [uri|https://slack.com/api/auth.test|]
+             [("token", convertString (atoken token))]
 
 convertQueryToMap :: Query -> M.Map BS.ByteString BS.ByteString
 convertQueryToMap query =
