@@ -76,9 +76,14 @@ handleRequest :: Text -> Request -> IO BL.ByteString
 handleRequest "favicon.ico" _ = return ""
 handleRequest _ request = do
   mgr <- newManager tlsManagerSettings
-  token <- getApiToken mgr $ getApiCode request
-  authRes <- runApiCall mgr (accessToken token)
+  oauthToken <- getApiToken mgr $ getApiCode request
+  let token = accessToken oauthToken
+  saveTokenToFile "./token.txt" token
+  authRes <- runApiCall mgr token
   return $ convertString $ show authRes
+
+saveTokenToFile :: FilePath -> AccessToken -> IO ()
+saveTokenToFile fp = (writeFile fp) . convertString . atoken
 
 runApiCall :: Manager -> AccessToken -> IO (OAuth2Result (OAuth2Error Errors) BL.ByteString)
 runApiCall mgr token =
