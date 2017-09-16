@@ -36,14 +36,22 @@ data Errors =
 instance FromJSON Errors where
   parseJSON = genericParseJSON defaultOptions { constructorTagModifier = camelTo2 '_', allNullaryToStringTag = True }
 
+readPortFromCallbackURI :: IO Int
+readPortFromCallbackURI = do
+  uri <- readCallbackURI
+  case readPort uri of
+    Nothing   -> return 9988
+    Just port -> return port
+
 main :: IO ()
 main = do
   mgr <- newManager tlsManagerSettings
   slackKey <- getSlackKey
+  port <- readPortFromCallbackURI
   print $ serializeURIRef' $ appendQueryParams [("state", state), ("scope", "client")]
         $ authorizationUrl slackKey
   putStrLn "visit the url"
-  run 9988 application
+  run port application
 
 state :: BS.ByteString
 state = "testSlackApi"
