@@ -20,6 +20,7 @@ import Network.Linklater
 import Network.Linklater.Types
 
 import Types
+import SlackOAuth
 
 import qualified System.Environment as Env
 
@@ -57,6 +58,7 @@ jazzBot inbox outbox = do
 
 main :: IO ()
 main = void $ do
+  runWebServer
   Just apiToken <- Env.lookupEnv "SLACK_API_TOKEN"
   outbox <- newChan
   uriResult <- runExceptT (startRTM $ APIToken $ Text.pack apiToken)

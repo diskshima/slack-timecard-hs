@@ -23,23 +23,29 @@ executable slack-timecard-hs-exe
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  other-modules:     Types
+  other-modules:       Types
+                     , SlackKey
+                     , SlackOAuth
   build-depends:       base
+                     , aeson
                      , base-prelude
                      , bytestring
-                     , uri-bytestring
-                     , text >= 1.2.2.2
-                     , time >= 1.6
-                     , lens
-                     , aeson
-                     , wuss
-                     , warp >= 3.2.13
-                     , mtl >= 2.2.1
-                     , websockets
-                     , linklater >= 4.0.0.0
+                     , containers
                      , hoauth2
-                     , string-conversions
+                     , http-conduit
+                     , http-types     >= 0.9    && < 0.10
+                     , lens
+                     , linklater >= 4.0.0.0
+                     , mtl >= 2.2.1
                      , slack-timecard-hs
+                     , string-conversions
+                     , text           >= 1.2.2.2
+                     , time >= 1.6
+                     , uri-bytestring
+                     , wai            >= 3.2 && < 3.3
+                     , warp           >= 3.2.13
+                     , websockets
+                     , wuss
   default-language:    Haskell2010
 
 executable wuss-main
@@ -50,25 +56,6 @@ executable wuss-main
                      , text >= 1.2.2.2
                      , wuss
                      , websockets
-  default-language:    Haskell2010
-
-executable slack-oauth-main
-  hs-source-dirs:      app
-  main-is:             SlackOAuth.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  other-modules:       SlackKey
-  build-depends:       base
-                     , text           >= 1.2.2.2
-                     , bytestring
-                     , containers
-                     , http-types     >= 0.9    && < 0.10
-                     , uri-bytestring
-                     , http-conduit
-                     , warp           >= 3.2.13
-                     , wai            >= 3.2 && < 3.3
-                     , aeson
-                     , string-conversions
-                     , hoauth2
   default-language:    Haskell2010
 
 test-suite slack-timecard-hs-test

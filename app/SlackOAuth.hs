@@ -4,9 +4,10 @@
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Main where
+module SlackOAuth where
 
-import           Control.Monad            (mzero)
+import           Control.Concurrent (MVar, forkIO, newEmptyMVar, putMVar, takeMVar)
+import           Control.Monad      (mzero)
 import           Data.Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString          as BS
@@ -43,15 +44,17 @@ readPortFromCallbackURI = do
     Nothing   -> return 9988
     Just port -> return port
 
-main :: IO ()
-main = do
+runWebServer :: IO ()
+runWebServer = do
   mgr <- newManager tlsManagerSettings
   slackKey <- getSlackKey
   port <- readPortFromCallbackURI
   print $ serializeURIRef' $ appendQueryParams [("state", state), ("scope", "client")]
         $ authorizationUrl slackKey
   putStrLn "visit the url"
-  run port application
+  shutdownMVar <- newEmptyMVar
+  forkIO $ run port (application shutdownMVar)
+  takeMVar shutdownMVar
 
 state :: BS.ByteString
 state = "testSlackApi"
@@ -69,25 +72,27 @@ getApiCode :: Request -> ExchangeToken
 getApiCode request =
   case M.lookup "code" queryMap of
     Just code -> ExchangeToken $ T.decodeUtf8 code
-    Nothing   -> Prelude.error "request doesn't include code"
+    Nothing   -> Prelude.error ("request doesn't include code: " ++ (show request))
   where
     queryMap = convertQueryToMap $ queryString request
 
-application :: Application
-application request respond = do
-  response <- handleRequest requestPath request
+application :: MVar () -> Application
+application shutdownMVar request respond = do
+  response <- handleRequest shutdownMVar requestPath request
   respond $ responseLBS status200 [("Content-Type", "text/plain")] response
     where
       requestPath = T.intercalate "/" $ pathInfo request
 
-handleRequest :: Text -> Request -> IO BL.ByteString
-handleRequest "favicon.ico" _ = return ""
-handleRequest _ request = do
+handleRequest :: MVar () -> Text -> Request -> IO BL.ByteString
+handleRequest _ "favicon.ico" _ = return ""
+handleRequest _ "robots.txt" _  = return ""
+handleRequest shutdownMVar _ request = do
   mgr <- newManager tlsManagerSettings
   oauthToken <- getApiToken mgr $ getApiCode request
   let token = accessToken oauthToken
   saveTokenToFile "./token.txt" token
   authRes <- runApiCall mgr token
+  putMVar shutdownMVar ()
   return $ convertString $ show authRes
 
 saveTokenToFile :: FilePath -> AccessToken -> IO ()
