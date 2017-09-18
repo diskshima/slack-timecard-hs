@@ -26,16 +26,15 @@ module Types(
   , AuthTest(..)
 ) where
 
-import BasePrelude hiding ((&), putStrLn, lazy)
-import Control.Lens hiding ((.=))
-import Data.Aeson
-import Data.Aeson.Types
-import Data.Text.Strict.Lens
-import URI.ByteString
-
-import Control.Monad.Except (ExceptT(..))
-import Data.ByteString (ByteString)
-import Data.Text (Text)
+import           BasePrelude           hiding (lazy, putStrLn, (&))
+import           Control.Lens          hiding ((.=))
+import           Control.Monad.Except  (ExceptT (..))
+import           Data.Aeson
+import           Data.Aeson.Types
+import           Data.ByteString       (ByteString)
+import           Data.Text             (Text)
+import           Data.Text.Strict.Lens
+import           URI.ByteString
 
 type JPEGMonad = ExceptT String IO
 type Bytes = ByteString

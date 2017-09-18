@@ -3,29 +3,26 @@
 
 module Main where
 
-import qualified Data.Text as Text
-import Control.Lens
-import Control.Arrow ((&&&))
-import Control.Exception (try)
-import Control.Monad (void, forever, when)
-import Control.Monad.Except (runExceptT)
-import Data.String.Conversions  (convertString)
-import Data.Text.Strict.Lens
-import URI.ByteString
-import Data.Aeson (ToJSON, encode, decode)
-import Wuss (runSecureClient)
-import qualified Network.WebSockets as Sock
-import Network.HTTP.Simple
-import Network.HTTP.Conduit
-import Control.Concurrent (forkIO)
-import Control.Concurrent.Chan
-import Control.Concurrent.MVar
-
-import Network.Linklater
-import Network.Linklater.Types
-
-import Types
-import SlackOAuth
+import           Control.Arrow           ((&&&))
+import           Control.Concurrent      (forkIO)
+import           Control.Concurrent.Chan
+import           Control.Concurrent.MVar
+import           Control.Exception       (try)
+import           Control.Lens
+import           Control.Monad           (forever, void, when)
+import           Control.Monad.Except    (runExceptT)
+import           Data.Aeson              (ToJSON, encode)
+import           Data.String.Conversions (convertString)
+import qualified Data.Text               as Text
+import           Data.Text.Strict.Lens
+import           Network.HTTP.Conduit
+import           Network.Linklater
+import           Network.Linklater.Types
+import qualified Network.WebSockets      as Sock
+import           SlackOAuth
+import           Types
+import           URI.ByteString
+import           Wuss                    (runSecureClient)
 
 import qualified System.Environment as Env
 
@@ -61,18 +58,6 @@ jazzBot inbox outbox = do
       when (count == 2) $
         writeChan outbox (Speech line_ "JAZZ HANDS")
 
-checkAuthStatus :: String -> IO Bool
-checkAuthStatus token = do
-  initReq <- parseRequest "https://slack.com/api/auth.test"
-  let req = setRequestQueryString [("token", convertString <$> Just token)]
-                                  (initReq { method = "POST" })
-  response <- responseBody <$> httpLBS req
-  let authTest = decode response :: Maybe AuthTest
-  putStrLn (show authTest)
-  case authTest of
-    Nothing -> return False
-    Just at -> return (ok at)
-
 readToken :: IO String
 readToken = readFile "./token.txt"
 
@@ -87,11 +72,6 @@ tryReadToken = do
       authResult <- checkAuthStatus token
       when (not authResult) runWebServer; token <- readToken
       return token
-
-main :: IO ()
-main = void $ do
-  apiToken <- tryReadToken
-  runBots apiToken
 
 runBots :: String -> IO ()
 runBots apiToken = do
@@ -109,3 +89,8 @@ runBots apiToken = do
 sinkChan :: Chan Bytes -> IO ()
 sinkChan originalChan =
   (void . forever) $ readChan originalChan
+
+main :: IO ()
+main = void $ do
+  apiToken <- tryReadToken
+  runBots apiToken

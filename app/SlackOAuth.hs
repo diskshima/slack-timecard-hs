@@ -9,7 +9,7 @@ module SlackOAuth where
 import           Control.Concurrent       (MVar, forkIO, newEmptyMVar, putMVar,
                                            takeMVar)
 import           Control.Monad            (mzero)
-import           Data.Aeson
+import           Data.Aeson              (ToJSON, decode, encode, )
 import           Data.Aeson.Types
 import qualified Data.ByteString          as BS
 import qualified Data.ByteString.Lazy     as BL
@@ -22,14 +22,15 @@ import qualified Data.Text.Lazy           as TL
 import qualified Data.Text.Lazy.Encoding  as TLE
 import           GHC.Generics
 import           Network.HTTP.Conduit     hiding (Request, queryString)
+import           Network.HTTP.Simple      (httpLBS, setRequestQueryString)
 import           Network.HTTP.Types       (Query, status200)
 import           Network.OAuth.OAuth2
 import           Network.Wai
 import           Network.Wai.Handler.Warp (run)
-import           URI.ByteString           (serializeURIRef')
-import           URI.ByteString.QQ
-
 import           SlackKey
+import           Types
+import           URI.ByteString    (serializeURIRef')
+import           URI.ByteString.QQ
 
 data Errors =
   SomeRandomError
@@ -112,3 +113,14 @@ convertQueryToMap query =
     where
       normalize (k, Just v)  = (k, v)
       normalize (k, Nothing) = (k, BS.empty)
+
+checkAuthStatus :: String -> IO Bool
+checkAuthStatus token = do
+  initReq <- parseRequest "https://slack.com/api/auth.test"
+  let req = setRequestQueryString [("token", convertString <$> Just token)]
+                                  (initReq { method = "POST" })
+  response <- responseBody <$> httpLBS req
+  let authTest = decode response :: Maybe AuthTest
+  case authTest of
+    Nothing -> return False
+    Just at -> return (ok at)
