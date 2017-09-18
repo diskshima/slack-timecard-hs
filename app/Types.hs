@@ -21,9 +21,10 @@ module Types(
   , u
   , Line(..)
   , channel
-  , user
   , truth
-  , withInbox) where
+  , withInbox
+  , AuthTest(..)
+) where
 
 import BasePrelude hiding ((&), putStrLn, lazy)
 import Control.Lens hiding ((.=))
@@ -94,3 +95,16 @@ withInbox inbox cont = do
         return ()
       Right o ->
         void (cont o)
+
+data AuthTest = AuthTest { ok :: Bool, url :: !Text, team :: !Text, authuser :: !Text,
+                           team_id :: !Text, user_id :: !Text } deriving (Show)
+
+instance FromJSON AuthTest where
+  parseJSON (Object o) = do
+    AuthTest <$> o .: "ok"
+             <*> o .: "url"
+             <*> o .: "team"
+             <*> o .: "user"
+             <*> o .: "team_id"
+             <*> o .: "user_id"
+  parseJSON _ = mzero

@@ -6,8 +6,9 @@
 
 module SlackOAuth where
 
-import           Control.Concurrent (MVar, forkIO, newEmptyMVar, putMVar, takeMVar)
-import           Control.Monad      (mzero)
+import           Control.Concurrent       (MVar, forkIO, newEmptyMVar, putMVar,
+                                           takeMVar)
+import           Control.Monad            (mzero)
 import           Data.Aeson
 import           Data.Aeson.Types
 import qualified Data.ByteString          as BS
