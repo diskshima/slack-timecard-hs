@@ -22,29 +22,39 @@ import qualified Network.WebSockets      as Sock
 import           SlackOAuth
 import           Types
 import           URI.ByteString
-import Control.Concurrent (forkIO)
-import Control.Monad (forever, void)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BL
-import Data.ByteString.Lazy (toStrict)
-import Data.Text (Text, pack)
-import Network.Connection (Connection, ConnectionParams (..), TLSSettings (..),
-    connectionGetChunk, connectionPut, connectTo, initConnectionContext)
-import Network.Socket (PortNumber (..))
-import Network.WebSockets (ClientApp, ConnectionOptions, Headers,
-    defaultConnectionOptions, receiveData, runClientWithStream, sendClose,
-    sendTextData)
-import Network.WebSockets.Stream (makeStream)
 -- import           Wuss                    (runSecureClient)
+import           Control.Concurrent        (forkIO)
+import qualified Control.Exception         as Exception
+import           Control.Monad             (forever, void)
+import qualified Data.ByteString           as BS
+import           Data.ByteString.Lazy      (toStrict)
+import qualified Data.ByteString.Lazy      as BL
+import           Data.Text                 (Text, pack)
+import           Network.Connection        (Connection, ConnectionParams (..),
+                                            TLSSettings (..), connectTo,
+                                            connectionClose, connectionGetChunk,
+                                            connectionPut,
+                                            initConnectionContext)
+import           Network.Socket            (PortNumber (..))
+import           Network.WebSockets        (ClientApp, ConnectionOptions,
+                                            Headers, defaultConnectionOptions,
+                                            receiveData, runClientWithStream,
+                                            sendClose, sendTextData)
+import           Network.WebSockets.Stream (makeStream)
 
 import qualified System.Environment as Env
 
 runSecureClient :: String -> PortNumber -> String -> ClientApp a -> IO a
 runSecureClient host port path app = do
     context <- initConnectionContext
-    connection <- connectTo context (connectionParams host port)
-    stream <- makeStream (reader connection) (writer connection)
-    runClientWithStream stream host path connectionOptions headers app
+    Exception.bracket
+        (connectTo context (connectionParams host port))
+        (\conn -> do
+            putStrLn "Closing..."
+            connectionClose conn)
+        (\connection -> do
+            stream <- makeStream (reader connection) (writer connection)
+            runClientWithStream stream host path connectionOptions headers app)
 
 connectionParams :: String -> PortNumber -> ConnectionParams
 connectionParams host port = ConnectionParams
