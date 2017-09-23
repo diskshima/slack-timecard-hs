@@ -40,7 +40,7 @@ type JPEGMonad = ExceptT String IO
 type Bytes = ByteString
 
 data Brain = Brain { _api, _bearer :: !Text } deriving (Show)
-data World = World { _wss :: !URI } deriving (Show)
+newtype World = World { _wss :: URI } deriving (Show)
 data Speech = Speech { _replyTo :: !Line, _t :: !Text } deriving (Show)
 data Speech' = Speech' { _speech :: !Speech, _id :: !Int } deriving (Show)
 data Line = Line { _channel :: !Text, _user :: !Text, _truth :: !Text } deriving (Eq, Ord, Show)
@@ -96,10 +96,10 @@ withInbox inbox cont = do
         void (cont o)
 
 data AuthTest = AuthTest { ok :: Bool, url :: !Text, team :: !Text, authuser :: !Text,
-                           team_id :: !Text, user_id :: !Text } deriving (Show)
+                           teamId :: !Text, userId :: !Text } deriving (Show)
 
 instance FromJSON AuthTest where
-  parseJSON (Object o) = do
+  parseJSON (Object o) =
     AuthTest <$> o .: "ok"
              <*> o .: "url"
              <*> o .: "team"

@@ -9,7 +9,7 @@ import           Control.Concurrent.Chan
 import           Control.Concurrent.MVar
 import           Control.Exception       (try)
 import           Control.Lens
-import           Control.Monad           (forever, void, when)
+import           Control.Monad           (forever, unless, void, when)
 import           Control.Monad.Except    (runExceptT)
 import           Data.Aeson              (ToJSON, encode)
 import           Data.String.Conversions (convertString)
@@ -63,22 +63,22 @@ readToken = readFile "./token.txt"
 
 tryReadToken :: IO String
 tryReadToken = do
-  tokenOrExc <- try $ readToken
+  tokenOrExc <- try readToken
   case tokenOrExc of
     Left (e :: IOError) -> do
       runWebServer
       readToken
     Right token -> do
       authResult <- checkAuthStatus token
-      when (not authResult) runWebServer; token <- readToken
-      return token
+      unless authResult runWebServer
+      readToken
 
 runBots :: String -> IO ()
 runBots apiToken = do
   outbox <- newChan
   uriResult <- runExceptT (startRTM $ APIToken $ Text.pack apiToken)
   case uriResult of
-    Left e -> do
+    Left e ->
       error ("Request error" ++ show e)
     Right uri -> do
       inbox <- voila uri outbox

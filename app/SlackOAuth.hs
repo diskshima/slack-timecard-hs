@@ -74,7 +74,7 @@ getApiCode :: Request -> ExchangeToken
 getApiCode request =
   case M.lookup "code" queryMap of
     Just code -> ExchangeToken $ T.decodeUtf8 code
-    Nothing   -> Prelude.error ("request doesn't include code: " ++ (show request))
+    Nothing   -> Prelude.error ("request doesn't include code: " ++ show request)
   where
     queryMap = convertQueryToMap $ queryString request
 
@@ -98,7 +98,7 @@ handleRequest shutdownMVar _ request = do
   return $ convertString $ show authRes
 
 saveTokenToFile :: FilePath -> AccessToken -> IO ()
-saveTokenToFile fp = (writeFile fp) . convertString . atoken
+saveTokenToFile fp = writeFile fp . convertString . atoken
 
 runApiCall :: Manager -> AccessToken -> IO (OAuth2Result (OAuth2Error Errors) BL.ByteString)
 runApiCall mgr token =

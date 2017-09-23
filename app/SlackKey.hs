@@ -12,10 +12,10 @@ import           URI.ByteString
 import           URI.ByteString.QQ
 
 readPort :: URI -> Maybe Int
-readPort uri = do
+readPort uri =
   case uriAuthority uri of
     Nothing -> Nothing
-    Just auth -> do
+    Just auth ->
       case authorityPort auth of
         Nothing -> Nothing
         Just port -> Just $ portNumber port
@@ -45,7 +45,7 @@ getSlackKey = do
                 }
 
 parseURILax :: Text -> Maybe URI
-parseURILax uriText = do
+parseURILax uriText =
   case parseURI laxURIParserOptions (convertString uriText) of
     Left e    -> Nothing
     Right uri -> Just uri
