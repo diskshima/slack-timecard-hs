@@ -26,7 +26,6 @@ executable slack-timecard-hs-exe
   other-modules:       Types
                      , SlackKey
                      , SlackOAuth
-                     , WSSClient
   build-depends:       base
                      , aeson
                      , base-prelude
@@ -49,6 +48,7 @@ executable slack-timecard-hs-exe
                      , wai            >= 3.2 && < 3.3
                      , warp           >= 3.2.13
                      , websockets
+                     , wuss
   default-language:    Haskell2010
 
 test-suite slack-timecard-hs-test
