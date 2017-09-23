@@ -30,6 +30,8 @@ executable slack-timecard-hs-exe
                      , aeson
                      , base-prelude
                      , bytestring
+                     , connection
+                     , network
                      , containers
                      , hoauth2
                      , hlint
