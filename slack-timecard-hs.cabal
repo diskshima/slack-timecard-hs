@@ -22,6 +22,7 @@ executable slack-timecard-hs-exe
   other-modules:       Types
                      , SlackKey
                      , SlackOAuth
+                     , SlackPipe
   build-depends:       base
                      , aeson
                      , base-prelude

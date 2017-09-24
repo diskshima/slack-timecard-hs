@@ -4,52 +4,22 @@
 module Main where
 
 import           Control.Arrow           ((&&&))
-import           Control.Concurrent      (forkIO)
 import           Control.Concurrent.Chan
 import           Control.Concurrent.MVar
 import           Control.Exception       (try)
 import           Control.Lens
 import           Control.Monad           (forever, unless, void, when)
 import           Control.Monad.Except    (runExceptT)
-import           Data.Aeson              (ToJSON, encode)
 import           Data.String.Conversions (convertString)
 import qualified Data.Text               as Text
 import           Data.Text.Strict.Lens
 import           Network.HTTP.Conduit
 import           Network.Linklater
 import           Network.Linklater.Types
-import qualified Network.WebSockets      as WebSockets
 import           SlackOAuth
 import           Types
 import           URI.ByteString
-import           Wuss                    (runSecureClient)
-
-voila :: URI -> Chan Speech -> IO (Chan Bytes)
-voila uri outbox =
-  case (uri ^? authorityL . _Just . authorityHostL . hostBSL . utf8 . unpacked,
-        uri ^? pathL . utf8 . unpacked) of
-    (Just host, Just path) -> do
-      chan <- newChan
-      putStrLn $ "Connecting to " ++ host ++ path
-      forkIO $ runSecureClient host 443 path (consumer chan)
-      return chan
-    _ ->
-      error ("invalid url" ++ show uri)
-  where
-    consumer chan conn = do
-      void . forkIO . forever $ worker
-      forever listener
-      where
-        worker = do
-          putStrLn "Worker: Waiting to read any messages"
-          msg <- WebSockets.receiveData conn
-          putStrLn $ "Message read: " ++ show msg
-          writeChan chan msg
-        listener = do
-          putStrLn "Listener: waiting for message to send out"
-          speech <- readChan outbox
-          putStrLn $ "Sending message: " ++ show speech
-          WebSockets.sendTextData conn (encode (Speech' speech 1))
+import           SlackPipe
 
 jazzBot :: Chan Bytes -> Chan Speech -> IO ()
 jazzBot inbox outbox = do
@@ -84,7 +54,7 @@ runBots apiToken = do
     Left e ->
       error ("Request error" ++ show e)
     Right uri -> do
-      inbox <- voila uri outbox
+      inbox <- chanStarter uri outbox
       jazzBot inbox outbox
       sinkChan inbox
 
