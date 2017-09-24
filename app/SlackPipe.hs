@@ -2,13 +2,14 @@ module SlackPipe where
 
 import           Control.Concurrent      (forkIO)
 import           Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
-import           Control.Lens
+import           Control.Lens            ((^?), _Just)
 import           Control.Monad           (forever, void)
 import           Data.Aeson              (encode)
-import           Data.Text.Strict.Lens
+import           Data.Text.Strict.Lens   (unpacked, utf8)
 import           Network.WebSockets      (Connection, receiveData, sendTextData)
-import           Types
-import           URI.ByteString
+import           Types                   (Bytes, Speech, Speech' (..))
+import           URI.ByteString          (URI, authorityHostL, authorityL,
+                                          hostBSL, pathL)
 import           Wuss                    (runSecureClient)
 
 chanStarter :: URI -> Chan Speech -> IO (Chan Bytes)
