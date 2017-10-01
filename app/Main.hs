@@ -21,7 +21,7 @@ jazzBot :: Chan Bytes -> Chan Speech -> IO ()
 jazzBot inbox outbox = do
   countDB <- newMVar (0 :: Int)
   withInbox inbox $ \line_ ->
-    when (isInfixOf ":raised_hands:" (line_ ^. truth)) $ do
+    when (":raised_hands:" `isInfixOf` (line_ ^. truth)) $ do
       let update = (`mod` 3) . (+ 1) &&& Types.id
       count <- modifyMVar countDB (return . update)
       when (count == 2) $
